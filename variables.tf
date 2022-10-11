@@ -5,15 +5,15 @@ variable "aws_region" {
 }
 
 variable "bucket_name_tickets" {
-  default = "pccdatafeed"
+  default = "pcc-datafeed"
 }
 
 variable "bucket_name_transactions" {
-  default = "pccdailytransactionreport"
+  default = "pcc-dailytransactionreport"
 }
 
 variable "tickets_name_function" {
-  default = "pccdailytransactionreport"
+  default = "pcc_loadticketsFn"
 }
 
 variable "transactions_name_function" {
