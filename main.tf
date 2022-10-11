@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 # Adding S3 buckets for tickets and transactions
-resource "aws_s3_bucket" "tfer--pccdailytransactionreport" {
+resource "aws_s3_bucket" "pccdailytransactionreport" {
   bucket        = var.bucket_name_transactions
   acl           = "private"
 
@@ -12,7 +12,7 @@ resource "aws_s3_bucket" "tfer--pccdailytransactionreport" {
  }
 }
 
-resource "aws_s3_bucket" "tfer--pccdatafeed" {
+resource "aws_s3_bucket" "pccdatafeed" {
   bucket        = var.bucket_name_tickets
   acl           = "private"
 
@@ -22,7 +22,7 @@ resource "aws_s3_bucket" "tfer--pccdatafeed" {
 }
 
 # Adding Lambda function for transactions
-resource "aws_lambda_function" "tfer--pcc_dailytransactionFn" {
+resource "aws_lambda_function" "pcc_dailytransactionFn" {
   architectures = ["x86_64"]
 
   ephemeral_storage {
@@ -34,19 +34,16 @@ resource "aws_lambda_function" "tfer--pcc_dailytransactionFn" {
   memory_size                    = "512"
   package_type                   = "Zip"
   reserved_concurrent_executions = "-1"
-  role                           = "arn:aws:iam::439712476071:role/service-role/pcc_dailytransactionFn-role-v0fpf6ka"
+  role                           = "${aws_iam_role.pcc_dailytransactionFn-role-v0fpf6ka.arn}"  
   runtime                        = "python3.9"
   source_code_hash               = "9HQJd9/HuwpLTELojtyUKy+BFksKi7crG6uN8KD4PB4="
   timeout                        = "300"
   filename                       = "pcc_dailytransactionFn.zip"
 
-  tracing_config {
-    mode = "PassThrough"
-  }
 }
 
 # Adding Lambda function for tickets
-resource "aws_lambda_function" "tfer--pcc_loadticketsFn" {
+resource "aws_lambda_function" "pcc_loadticketsFn" {
   architectures = ["x86_64"]
 
   ephemeral_storage {
@@ -58,19 +55,16 @@ resource "aws_lambda_function" "tfer--pcc_loadticketsFn" {
   memory_size                    = "256"
   package_type                   = "Zip"
   reserved_concurrent_executions = "-1"
-  role                           = "arn:aws:iam::439712476071:role/service-role/pcc_loadticketsFn-role-br00tq6v"
+  role                           = "${aws_iam_role.pcc_loadticketsFn-role-br00tq6v.arn}"
   runtime                        = "python3.9"
   source_code_hash               = "EIJpgfnfG0LlyzuO3os70seSv5pxRZJ1XluReHfQnC0="
   timeout                        = "600"
   filename                       = "pcc_loadticketsFn.zip"
   
-  tracing_config {
-    mode = "PassThrough"
-  }
 }
 
 # Adding DynamoDB table for transactions
-resource "aws_dynamodb_table" "tfer--pccdailytransactionreportt" {
+resource "aws_dynamodb_table" "pccdailytransactionreportt" {
   attribute {
     name = "Order ID"
     type = "S"
@@ -96,7 +90,7 @@ resource "aws_dynamodb_table" "tfer--pccdailytransactionreportt" {
 }
 
 # Adding DynamoDB table for tickets
-resource "aws_dynamodb_table" "tfer--pccdatafeedt" {
+resource "aws_dynamodb_table" "pccdatafeedt" {
   attribute {
     name = "Barcode"
     type = "S"
@@ -123,7 +117,8 @@ resource "aws_dynamodb_table" "tfer--pccdatafeedt" {
 }
 
 # Adding IAM roles
-resource "aws_iam_role" "tfer--pcc_dailytransactionFn-role-v0fpf6ka" {
+resource "aws_iam_role" "pcc_dailytransactionFn-role-v0fpf6ka" {
+  name = "pcc_dailytransactionFn-role-v0fpf6ka"
   assume_role_policy = <<POLICY
 {
   "Statement": [
@@ -138,14 +133,10 @@ resource "aws_iam_role" "tfer--pcc_dailytransactionFn-role-v0fpf6ka" {
   "Version": "2012-10-17"
 }
 POLICY
-
-  managed_policy_arns  = ["arn:aws:iam::439712476071:policy/service-role/AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-a9cb-decccf697c76", "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess", "arn:aws:iam::aws:policy/AmazonS3FullAccess"]
-  max_session_duration = "3600"
-  name                 = "pcc_dailytransactionFn-role-v0fpf6ka"
-  path                 = "/service-role/"
 }
 
-resource "aws_iam_role" "tfer--pcc_loadticketsFn-role-br00tq6v" {
+resource "aws_iam_role" "pcc_loadticketsFn-role-br00tq6v" {
+  name="pcc_loadticketsFn-role-br00tq6v"
   assume_role_policy = <<POLICY
 {
   "Statement": [
@@ -160,15 +151,10 @@ resource "aws_iam_role" "tfer--pcc_loadticketsFn-role-br00tq6v" {
   "Version": "2012-10-17"
 }
 POLICY
-
-  managed_policy_arns  = ["arn:aws:iam::439712476071:policy/service-role/AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-af09-937a40600818", "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess", "arn:aws:iam::aws:policy/AmazonS3FullAccess"]
-  max_session_duration = "3600"
-  name                 = "pcc_loadticketsFn-role-br00tq6v"
-  path                 = "/service-role/"
 }
 
 # Adding IAM Policies
-resource "aws_iam_policy" "tfer--AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-a9cb-decccf697c76" {
+resource "aws_iam_policy" "AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-a9cb-decccf697c76" {
   name = "AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-a9cb-decccf697c76"
   path = "/service-role/"
 
@@ -182,12 +168,13 @@ resource "aws_iam_policy" "tfer--AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-
     },
     {
       "Action": [
+        "logs:CreateLogGroup",
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ],
       "Effect": "Allow",
       "Resource": [
-        "arn:aws:logs:us-east-1:439712476071:log-group:/aws/lambda/pcc_dailytransactionFn:*"
+         "arn:aws:logs:*:*:*"
       ]
     }
   ],
@@ -196,7 +183,7 @@ resource "aws_iam_policy" "tfer--AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-
 POLICY
 }
 
-resource "aws_iam_policy" "tfer--AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-af09-937a40600818" {
+resource "aws_iam_policy" "AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-af09-937a40600818" {
   name = "AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-af09-937a40600818"
   path = "/service-role/"
 
@@ -210,12 +197,13 @@ resource "aws_iam_policy" "tfer--AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-
     },
     {
       "Action": [
+        "logs:CreateLogGroup",
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ],
       "Effect": "Allow",
       "Resource": [
-        "arn:aws:logs:us-east-1:439712476071:log-group:/aws/lambda/pcc_loadticketsFn:*"
+        "arn:aws:logs:*:*:*"
       ]
     }
   ],
@@ -224,79 +212,59 @@ resource "aws_iam_policy" "tfer--AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-
 POLICY
 }
 
-resource "aws_iam_policy" "tfer--AWSLambdaS3ExecutionRole-f1dac8b6-4bb8-4e5b-adfa-f736c6af221a" {
-  name = "AWSLambdaS3ExecutionRole-f1dac8b6-4bb8-4e5b-adfa-f736c6af221a"
-  path = "/service-role/"
-
-  policy = <<POLICY
-{
-  "Statement": [
-    {
-      "Action": [
-        "s3:GetObject"
-      ],
-      "Effect": "Allow",
-      "Resource": "arn:aws:s3:::*"
-    }
-  ],
-  "Version": "2012-10-17"
-}
-POLICY
-}
-
 # Adding IAM Policy attachments
-resource "aws_iam_role_policy_attachment" "tfer--pcc_loadticketsFn-role-br00tq6v_AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-af09-937a40600818" {
-  policy_arn = "arn:aws:iam::439712476071:policy/service-role/AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-af09-937a40600818"
-  role       = "pcc_loadticketsFn-role-br00tq6v"
-}
-
-resource "aws_iam_role_policy_attachment" "tfer--pcc_loadticketsFn-role-br00tq6v_AmazonDynamoDBFullAccess" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
-  role       = "pcc_loadticketsFn-role-br00tq6v"
-}
-
-resource "aws_iam_role_policy_attachment" "tfer--pcc_loadticketsFn-role-br00tq6v_AmazonS3FullAccess" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
-  role       = "pcc_loadticketsFn-role-br00tq6v"
-}
-
-resource "aws_iam_role_policy_attachment" "tfer--pcc_dailytransactionFn-role-v0fpf6ka_AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-a9cb-decccf697c76" {
-  policy_arn = "arn:aws:iam::439712476071:policy/service-role/AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-a9cb-decccf697c76"
+resource "aws_iam_role_policy_attachment" "pcc_dailytransactionFn-role-v0fpf6ka_AWSLambdaBasicExecutionRole-36645b1f-1f0a-4d17-a9cb-decccf697c76" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
   role       = "pcc_dailytransactionFn-role-v0fpf6ka"
 }
 
-resource "aws_iam_role_policy_attachment" "tfer--pcc_dailytransactionFn-role-v0fpf6ka_AmazonDynamoDBFullAccess" {
+resource "aws_iam_role_policy_attachment" "pcc_dailytransactionFn-role-v0fpf6ka_AmazonDynamoDBFullAccess" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
   role       = "pcc_dailytransactionFn-role-v0fpf6ka"
 }
 
-resource "aws_iam_role_policy_attachment" "tfer--pcc_dailytransactionFn-role-v0fpf6ka_AmazonS3FullAccess" {
+resource "aws_iam_role_policy_attachment" "pcc_dailytransactionFn-role-v0fpf6ka_AmazonS3FullAccess" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
   role       = "pcc_dailytransactionFn-role-v0fpf6ka"
 }
 
-# Adding S3 bucket as trigger to lambda and giving the permissions
+resource "aws_iam_role_policy_attachment" "pcc_loadticketsFn-role-br00tq6v_AWSLambdaBasicExecutionRole-daf5335d-2d8e-4ad8-af09-937a40600818" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  role       = "pcc_loadticketsFn-role-br00tq6v"
+}
+
+resource "aws_iam_role_policy_attachment" "pcc_loadticketsFn-role-br00tq6v_AmazonDynamoDBFullAccess" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+  role       = "pcc_loadticketsFn-role-br00tq6v"
+}
+
+resource "aws_iam_role_policy_attachment" "pcc_loadticketsFn-role-br00tq6v_AmazonS3FullAccess" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  role       = "pcc_loadticketsFn-role-br00tq6v"
+}
+
+# Adding S3 buckets as trigger to lambda and giving the permissions
 resource "aws_s3_bucket_notification" "aws-lambda-transactions-trigger" {
-  bucket = aws_s3_bucket.tfer--pccdailytransactionreport.id
+  bucket = aws_s3_bucket.pccdailytransactionreport.id
   lambda_function {
-    lambda_function_arn = aws_lambda_function.tfer--pcc_dailytransactionFn.arn
+    lambda_function_arn = aws_lambda_function.pcc_dailytransactionFn.arn
     events              = ["s3:ObjectCreated:Put"]
-
   }
+  depends_on = [aws_lambda_permission.lambda-transactions-permission]
 }
 
 resource "aws_lambda_permission" "lambda-transactions-permission" {
   statement_id  = "AllowS3Invoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.tfer--pcc_dailytransactionFn.function_name
+  function_name = aws_lambda_function.pcc_dailytransactionFn.arn
   principal     = "s3.amazonaws.com"
-  source_arn    = "arn:aws:s3:::${aws_s3_bucket.tfer--pccdailytransactionreport.id}"
+  source_arn    = "arn:aws:s3:::${aws_s3_bucket.pccdailytransactionreport.id}"
 }
 
 resource "aws_s3_bucket_notification" "aws-lambda-tickets-trigger" {
-  bucket = aws_s3_bucket.tfer--pccdatafeed.id
+  bucket = aws_s3_bucket.pccdatafeed.id
   lambda_function {
-    lambda_function_arn = aws_lambda_function.tfer--pcc_loadticketsFn.arn
+    lambda_function_arn = aws_lambda_function.pcc_loadticketsFn.arn
     events              = ["s3:ObjectCreated:Put"]
 
   }
@@ -305,7 +273,11 @@ resource "aws_s3_bucket_notification" "aws-lambda-tickets-trigger" {
 resource "aws_lambda_permission" "lambda-tickets-permission" {
   statement_id  = "AllowS3Invoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.tfer--pcc_loadticketsFn.function_name
+  function_name = aws_lambda_function.pcc_loadticketsFn.arn
   principal     = "s3.amazonaws.com"
-  source_arn    = "arn:aws:s3:::${aws_s3_bucket.tfer--pccdatafeed.id}"
+  source_arn    = "arn:aws:s3:::${aws_s3_bucket.pccdatafeed.id}"
 }
+
+# Adding Autoscaling to DynamoDb tables
+# TBD
+
