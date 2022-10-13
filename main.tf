@@ -40,6 +40,12 @@ resource "aws_lambda_function" "pcc_dailytransactionFn" {
   timeout                        = "300"
   filename                       = "pcc_dailytransactionFn.zip"
 
+  environment {
+    variables = {
+      transactions_dynamodb_table = var.transactions_name_table
+    }
+  }
+
 }
 
 # Adding Lambda function for tickets
@@ -52,14 +58,20 @@ resource "aws_lambda_function" "pcc_loadticketsFn" {
 
   function_name                  = var.tickets_name_function
   handler                        = "lambda_function.lambda_handler"
-  memory_size                    = "256"
+  memory_size                    = "1024"
   package_type                   = "Zip"
   reserved_concurrent_executions = "-1"
   role                           = "${aws_iam_role.pcc_loadticketsFn-role-br00tq6v.arn}"
   runtime                        = "python3.9"
   source_code_hash               = "EIJpgfnfG0LlyzuO3os70seSv5pxRZJ1XluReHfQnC0="
-  timeout                        = "600"
+  timeout                        = "900"
   filename                       = "pcc_loadticketsFn.zip"
+
+  environment {
+    variables = {
+      tickets_dynamodb_table = var.tickets_name_table
+    }
+  }
   
 }
 
@@ -84,9 +96,63 @@ resource "aws_dynamodb_table" "pccdailytransactionreportt" {
   }
 
   range_key      = "Order ID"
-  read_capacity  = "10"
   stream_enabled = "false"
-  write_capacity = "10"
+  write_capacity = 1
+  read_capacity  = 1
+
+  lifecycle{
+    ignore_changes = [write_capacity, read_capacity]
+  }
+}
+
+# Adding resource and policy for Read Autoscaling
+resource "aws_appautoscaling_target" "dynamodb_table_pccdailytransactionreportt_read" {
+  max_capacity       = 100
+  min_capacity       = 10
+  resource_id        = "table/${aws_dynamodb_table.pccdailytransactionreportt.name}"
+  scalable_dimension = "dynamodb:table:ReadCapacityUnits"
+  service_namespace  = "dynamodb"
+}
+
+resource "aws_appautoscaling_policy" "dynamodb_table_pccdailytransactionreportt_policy_read" {
+  name               = "DynamoDBReadCapacityUtilization:${aws_appautoscaling_target.dynamodb_table_pccdailytransactionreportt_read.resource_id}"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.dynamodb_table_pccdailytransactionreportt_read.resource_id
+  scalable_dimension = aws_appautoscaling_target.dynamodb_table_pccdailytransactionreportt_read.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.dynamodb_table_pccdailytransactionreportt_read.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "DynamoDBReadCapacityUtilization"
+    }
+
+    target_value = 70
+  }
+}
+
+# Adding resource and policy for Write Autoscaling
+resource "aws_appautoscaling_target" "dynamodb_table_pccdailytransactionreportt_write" {
+  max_capacity       = 100
+  min_capacity       = 10
+  resource_id        = "table/${aws_dynamodb_table.pccdailytransactionreportt.name}"
+  scalable_dimension = "dynamodb:table:WriteCapacityUnits"
+  service_namespace  = "dynamodb"
+}
+
+resource "aws_appautoscaling_policy" "dynamodb_table_pccdailytransactionreportt_policy_write" {
+  name               = "DynamoDBWriteCapacityUtilization:${aws_appautoscaling_target.dynamodb_table_pccdailytransactionreportt_write.resource_id}"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.dynamodb_table_pccdailytransactionreportt_write.resource_id
+  scalable_dimension = aws_appautoscaling_target.dynamodb_table_pccdailytransactionreportt_write.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.dynamodb_table_pccdailytransactionreportt_write.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "DynamoDBWriteCapacityUtilization"
+    }
+
+    target_value = 70
+  }
 }
 
 # Adding DynamoDB table for tickets
@@ -101,19 +167,73 @@ resource "aws_dynamodb_table" "pccdatafeedt" {
     type = "S"
   }
 
-  billing_mode = "PROVISIONED"
-  hash_key     = "Barcode"
-  name         = var.tickets_name_table
+  billing_mode    = "PROVISIONED"
+  hash_key        = "Barcode"
+  name            = var.tickets_name_table
+  write_capacity  = 1
+  read_capacity   = 1
 
   point_in_time_recovery {
     enabled = "false"
   }
 
   range_key      = "Order_ID"
-  read_capacity  = "10"
   stream_enabled = "false"
   table_class    = "STANDARD"
-  write_capacity = "10"
+
+  lifecycle{
+    ignore_changes = [write_capacity, read_capacity]
+  }
+}
+
+# Adding resource and policy for Read Autoscaling
+resource "aws_appautoscaling_target" "dynamodb_table_pccdatafeedt_read" {
+  max_capacity       = 100
+  min_capacity       = 10
+  resource_id        = "table/${aws_dynamodb_table.pccdatafeedt.name}"
+  scalable_dimension = "dynamodb:table:ReadCapacityUnits"
+  service_namespace  = "dynamodb"
+}
+
+resource "aws_appautoscaling_policy" "dynamodb_table_pccdatafeedt_policy_read" {
+  name               = "DynamoDBReadCapacityUtilization:${aws_appautoscaling_target.dynamodb_table_pccdatafeedt_read.resource_id}"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.dynamodb_table_pccdatafeedt_read.resource_id
+  scalable_dimension = aws_appautoscaling_target.dynamodb_table_pccdatafeedt_read.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.dynamodb_table_pccdatafeedt_read.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "DynamoDBReadCapacityUtilization"
+    }
+
+    target_value = 70
+  }
+}
+
+# Adding resource and policy for Write Autoscaling
+resource "aws_appautoscaling_target" "dynamodb_table_pccdatafeedt_write" {
+  max_capacity       = 100
+  min_capacity       = 10
+  resource_id        = "table/${aws_dynamodb_table.pccdatafeedt.name}"
+  scalable_dimension = "dynamodb:table:WriteCapacityUnits"
+  service_namespace  = "dynamodb"
+}
+
+resource "aws_appautoscaling_policy" "dynamodb_table_pccdatafeedt_policy_write" {
+  name               = "DynamoDBWriteCapacityUtilization:${aws_appautoscaling_target.dynamodb_table_pccdatafeedt_write.resource_id}"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.dynamodb_table_pccdatafeedt_write.resource_id
+  scalable_dimension = aws_appautoscaling_target.dynamodb_table_pccdatafeedt_write.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.dynamodb_table_pccdatafeedt_write.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "DynamoDBWriteCapacityUtilization"
+    }
+
+    target_value = 70
+  }
 }
 
 # Adding IAM roles
