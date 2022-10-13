@@ -1,3 +1,7 @@
+#PCC API For Ticketing System
+#October 2022
+#Tech9 
+
 provider "aws" {
   region =var.aws_region
 }
@@ -398,6 +402,5 @@ resource "aws_lambda_permission" "lambda-tickets-permission" {
   source_arn    = "arn:aws:s3:::${aws_s3_bucket.pccdatafeed.id}"
 }
 
-# Adding Autoscaling to DynamoDb tables
-# TBD
+
 
